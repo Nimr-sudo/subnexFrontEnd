@@ -1,24 +1,22 @@
-import logo from './logo.svg';
+
 import './App.css';
+import Navbar from './common/Navbar';
+import LandingPage from './pages/LandingPage';
+import VendorsSignup from './pages/VendorsSignup';
+import PlacedBid from './pages/PlacedBid';
+import PostJob from './pages/PostJob';
+import ShopDashboard from './pages/ShopDashboard';
+import SlidingPage from './pages/SlidingPage';
+import AppRoutes from './Routes/AppRoutes';
+import { UserProvider } from './pages/UserContext';
 
 function App() {
   return (
+    <UserProvider>
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <AppRoutes/>
     </div>
+    </UserProvider>
   );
 }
 
