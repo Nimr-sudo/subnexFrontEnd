@@ -12,6 +12,7 @@ import PostJob from "../pages/PostJob";
 import PendingJobs from "../pages/PendingJobs";
 import SecondSlidingPage from "../pages/SecondSlidingPage";
 import LoginComponentPage from "../pages/LoginPage";
+import Payment from "../pages/Payment";
 
 function AppRoutes() {
   return (
@@ -28,6 +29,7 @@ function AppRoutes() {
         <Route path="/s-sliding-page" element={<SecondSlidingPage />} />
         <Route path="/vendor-dashboard" element={<VendorDashboard />} />
         <Route path="/post-job" element={<PostJob />} />
+        <Route path="/payment" element={<Payment />} />
         <Route path="/pending-jobs" element={<PendingJobs />} />
         {/* Add more routes as needed */}
       </Routes>

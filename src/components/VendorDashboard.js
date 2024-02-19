@@ -46,12 +46,12 @@ const VendorDashboardComponent = () => {
     axios.get(`${baseURL}/jobs/all`)
       .then((response) => setJobs(response.data))
       .catch((error) => console.error("Error fetching all jobs:", error));
-
-    axios.get(`${baseURL}/bids/all`)
-      .then((response) => setSubmittedBids(response.data.bids))
-      .catch((error) => console.error("Error fetching submitted bids:", error));
-
+  
     if (userInfo?.uid) {
+      axios.get(`${baseURL}/bids/vendor/${userInfo.uid}`)
+        .then((response) => setSubmittedBids(response.data.bids))
+        .catch((error) => console.error("Error fetching submitted bids:", error));
+
       axios.get(`${baseURL}/vendors/preferences/${userInfo.uid}`)
         .then((response) => {
           console.log('Vendor preferences:', response.data);
@@ -60,6 +60,7 @@ const VendorDashboardComponent = () => {
         .catch((error) => console.error('Error fetching vendor preferences:', error));
     }
   }, [userInfo]);
+
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -139,11 +140,12 @@ const VendorDashboardComponent = () => {
 
       await axios.post(`${baseURL}/vendor/submit-bid`, {
         jobId: selectedJob.id,
+        shopId: selectedJob.shopId,
         shopName: selectedJob.shopName,
         category: selectedJob.category,
         description: selectedJob.description,
         date: new Date().toISOString(),
-        userId: userInfo.uid,
+        vendorId: userInfo.uid,
         payment,
         deadline,
       });

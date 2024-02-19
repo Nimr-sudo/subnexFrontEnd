@@ -22,6 +22,7 @@ function RepairSignupComponent(props) {
     preferences: 'option1',
     businessName: '',
     agreeTerms: false,
+    phoneNumber:'',
   });
 
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -81,6 +82,17 @@ function RepairSignupComponent(props) {
                   placeholder="Name here"
                   name="fullName"
                   value={formData.fullName}
+                  onChange={handleChange}
+                />
+              </FormRow>
+              <FormRow>
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  type="text"
+                  id="phoneNumber"
+                  placeholder="Number here"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
                   onChange={handleChange}
                 />
               </FormRow>
@@ -154,7 +166,7 @@ function RepairSignupComponent(props) {
         contentLabel="Success Modal"
       >
         <ModalText>Signup Successful</ModalText>
-        <SmallButton onClick={() => window.location.href = "/shop-dashboard"}>
+        <SmallButton onClick={() => window.location.href = "/login"}>
           OK
         </SmallButton>
       </SmallModal>

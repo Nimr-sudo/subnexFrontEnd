@@ -7,19 +7,38 @@ import  UserContext from '../pages/UserContext'; // Import UserContext from appr
 
 function PendingJobs() {
   const [jobs, setJobs] = useState([]);
-  const { userinfo } = React.useContext(UserContext); // Extract userinfo from user context
-
+  const { shopInfo } = React.useContext(UserContext); // Extract shopInfo from user context
+  console.log(shopInfo)
   useEffect(() => {
-    if (userinfo && userinfo.uid) {
+    if (shopInfo && shopInfo.uid) {
       // Fetch pending jobs with the userId as a query parameter
-      axios.get(`${baseURL}/shop-pending?userId=${userinfo.uid}`)
-        .then((response) => setJobs(response.data))
+      axios.get(`${baseURL}/shop-pending/${shopInfo.uid}`)
+        .then((response) => setJobs(response.data , 'shop pending'))
         .catch((error) => console.error("Error fetching pending jobs:", error));
     }
-  }, [userinfo]); // Fetch jobs whenever userinfo changes
+  }, [shopInfo]); // Fetch jobs whenever shopInfo changes
 
   const handleCompleteClick = (job) => {
-    // Code for completing a job goes here...
+    // Call the endpoint to delete the job from ShopPending
+    axios
+      .delete(`${baseURL}/shop-pending/delete/${job.id}`)
+      .then((deleteResponse) => {
+        console.log(deleteResponse.data , 'deleted job');
+        // If the job was successfully deleted from ShopPending, add it to ShopCompleted
+        axios
+          .post(`${baseURL}/shop-completed/add`, {
+            jobId: job.id,
+            category: job.category,
+            description: job.description,
+            // Include any other necessary data for the completed job
+          })
+          .then((addResponse) => {
+            console.log(addResponse.data);
+            // Optionally, you can update the UI or perform additional actions upon successful completion
+          })
+          .catch((addError) => console.error('Error adding job to ShopCompleted:', addError));
+      })
+      .catch((deleteError) => console.error('Error deleting job from ShopPending:', deleteError));
   };
 
   // Function to chunk the jobs array into arrays of 3 elements each
@@ -31,19 +50,18 @@ function PendingJobs() {
     acc[chunkIndex].push(job);
     return acc;
   }, []);
+
   return (
     <Div>
       <Div2>
         {chunkedJobs.map((row, rowIndex) => (
           <Div3 key={rowIndex}>
             {row.map((job) => (
-              <StyledLink to={`/placed-Pending/${job.id}`} key={job.id}>
-                <StyledCard>
-                  <CardHeading>{formatShopName(job.shopName)}</CardHeading>
-                  <CardText>{formatDescription(job.description)}</CardText>
-                  <CardButton>Complete</CardButton>
-                </StyledCard>
-              </StyledLink>
+              <StyledCard key={job.id}>
+                <CardHeading>{formatShopName(job.category)}</CardHeading>
+                <CardText>{formatDescription(job.description)}</CardText>
+                <CardButton onClick={() => handleCompleteClick(job)}>Complete</CardButton>
+              </StyledCard>
             ))}
           </Div3>
         ))}
@@ -52,6 +70,7 @@ function PendingJobs() {
     </Div>
   );
 }
+
 
 
 // Function to format description as specified

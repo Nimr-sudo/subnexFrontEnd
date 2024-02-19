@@ -6,6 +6,8 @@ import VendorDashboard from '../pages/VendorDashboard'; // Import VendorDashboar
 import axios from "axios";
 import FileUploadButton from "../Utils/FileUpload";
 import Modal from 'react-modal';
+import { useNavigate } from "react-router-dom"; // Import useNavigate hook
+
 
 // Define a simple Button component
 const Button = ({ onClick, children }) => (
@@ -25,6 +27,8 @@ function VendorsSignupComponent() {
     taxId: null,
     businessName: '',
     agreeTerms: false,
+    phoneNumber: '',
+
   });
 
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -42,6 +46,7 @@ function VendorsSignupComponent() {
       form.append('taxId', formData.taxId);
       form.append('businessName', formData.businessName);
       form.append('agreeTerms', formData.agreeTerms);
+      form.append('phoneNumber', formData.phoneNumber);
 
       const response = await axios.post(`${baseURL}/vendor-signup`, form);
       console.log(response);
@@ -99,6 +104,17 @@ function VendorsSignupComponent() {
                   placeholder="Name here"
                   name="fullName"
                   value={formData.fullName}
+                  onChange={handleChange}
+                />
+              </FormRow>
+              <FormRow>
+                <Label htmlFor="PhoneNumber">Phone Number</Label>
+                <Input
+                  type="text"
+                  id="phoneNumber"
+                  placeholder="Name here"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
                   onChange={handleChange}
                 />
               </FormRow>
@@ -175,7 +191,7 @@ function VendorsSignupComponent() {
         contentLabel="Success Modal"
       >
         <ModalText>Signup Successful</ModalText>
-        <SmallButton onClick={() => window.location.href = "/vendor-dashboard"}>
+        <SmallButton onClick={() => window.location.href = "/login"}>
           OK
         </SmallButton>
       </SmallModal>

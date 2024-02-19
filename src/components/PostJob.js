@@ -7,9 +7,9 @@ import FileUploadButton from "../Utils/FileUpload";
 import  UserContext from '../pages/UserContext'; // Import UserContext from appropriate path
 
 
-
 const PostJobComponent = (props) => {
   const { shopInfo } = React.useContext(UserContext);
+  console.log('shopInfo', shopInfo)
   const [formData, setFormData] = useState({
     email: '',
     category: '',

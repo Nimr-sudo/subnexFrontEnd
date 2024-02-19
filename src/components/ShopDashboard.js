@@ -12,35 +12,52 @@ function ShopDashboardComponent() {
 
   useEffect(() => {
     axios
-      .get(`${baseURL}/bids/all`)
+      .get(`${baseURL}/bids/shop/${shopInfo.uid}`)
       .then((response) => setSubmittedBids(response.data.bids))
       .catch((error) => console.error('Error fetching submitted bids:', error));
   }, []);
 
-  const handleCompleteClick = (bid) => {
+  const handleAcceptClick = (bid) => {
     axios
       .post(`${baseURL}/vendor-pending/add`, {
         jobId: bid.id,
         category: bid.category,
         description: bid.description,
         vendorid: bid.userId,
-        shopId:  shopInfo.uid, // Add userinfo.uid to the bid data
+        shopId: shopInfo.uid, // Add userinfo.uid to the bid data
+        payment: bid.payment,
       })
       .then((response) => {
         console.log(response.data);
+        // Add call to shop-pending/add
         axios
-          .delete(`${baseURL}/vendor-submitted-bids/${bid.id}`)
-          .then((response) => {
-            console.log(response.data);
-            axios
-              .get(`${baseURL}/bids/all`)
-              .then((response) => setSubmittedBids(response.data.bids))
-              .catch((error) => console.error('Error fetching submitted bids:', error));
+          .post(`${baseURL}/shop-pending/add`, {
+            jobId: bid.id,
+            category: bid.category,
+            description: bid.description,
+            vendorid: bid.userId,
+            shopId: shopInfo.uid,
+            payment: bid.payment,
+
           })
-          .catch((error) => console.error('Error deleting bid:', error));
+          .then((response) => {
+            console.log(response.data , 'shp pending added');
+            axios
+              .delete(`${baseURL}/vendor-submitted-bids/${bid.id}`)
+              .then((response) => {
+                console.log(response.data);
+                axios
+                  .get(`${baseURL}/bids/all`)
+                  .then((response) => setSubmittedBids(response.data.bids))
+                  .catch((error) => console.error('Error fetching submitted bids:', error));
+              })
+              .catch((error) => console.error('Error deleting bid:', error));
+          })
+          .catch((error) => console.error('Error adding job to ShopPending:', error));
       })
-      .catch((error) => console.error('Error adding job to ShopPending:', error));
+      .catch((error) => console.error('Error adding job to VendorPending:', error));
   };
+
 
 
   // Function to format description as specified
@@ -98,7 +115,7 @@ function ShopDashboardComponent() {
               <StyledCard key={bid.id}>
                 <CardHeading>{formatShopName(bid.shopName)}</CardHeading>
                 <CardText>{formatDescription(bid.description)}</CardText>
-                <CardButton onClick={() => handleCompleteClick(bid)}>Accept</CardButton>
+                <CardButton onClick={() => handleAcceptClick(bid)}>Accept</CardButton>
               </StyledCard>
             ))}
           </Div3>

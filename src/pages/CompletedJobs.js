@@ -31,7 +31,7 @@ function CompletedJobs(props) {
               {row.map((job) => (
                 <StyledLink to={`/placed-Complete/${job.id}`} key={job.id}>
                   <StyledCard>
-                    <CardHeading>{job.title}</CardHeading>
+                    <CardHeading>{job.category}</CardHeading>
                     <CardText>{formatDescription(job.description)}</CardText>
                     <CardButton>Complete</CardButton>
                   </StyledCard>

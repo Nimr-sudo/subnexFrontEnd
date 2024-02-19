@@ -1,81 +1,184 @@
 import React, { useState, useEffect } from 'react';
 import styled from "styled-components";
 import { Link } from "react-router-dom";
-import axios from "axios"; // Import axios for making HTTP requests
+import axios from "axios";
 import { baseURL } from '../config';
-import  UserContext from '../pages/UserContext'; // Import UserContext from appropriate path
+import UserContext from '../pages/UserContext';
+import { Elements } from '@stripe/react-stripe-js'; // Import Elements
+import { loadStripe } from '@stripe/stripe-js'; // Import loadStripe
+
+import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
+const stripePromise = loadStripe('pk_live_51OkAZWGBaU70AJWx0ZFDataV4MOE45vKHNklqFQ2KSzU4czwTcozUIW1N4fn4CuYnn0o8Oh200fdW0GmOL2B9gCX00Ka92qtcF'); // Replace 'your_stripe_public_key' with your actual Stripe public key
+
+// Component
+const StripePaymentForm = ({ job, onClose }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentComplete, setPaymentComplete] = useState(false);
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [role, setRole] = useState('');
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+  
+    if (!stripe || !elements) {
+      return;
+    }
+  
+    setIsProcessing(true);
+  
+    try {
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: elements.getElement(CardElement),
+        billing_details: {
+          name: name,
+          address: {
+            line1: address,
+          },
+        },
+      });
+  
+      if (error) {
+        throw error;
+      }
+  
+      // Send the paymentMethod.id and additional data to your server to process the payment
+      const response = await fetch('/api/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentMethodId: paymentMethod.id,
+          name: name,
+          address: address,
+          role: role,
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to process payment on server');
+      }
+  
+      // Call API to delete job
+      const deleteResponse = await axios.delete(`${baseURL}/vendor-pending/delete/${job.id}`);
+      if (deleteResponse.status === 200) {
+        // Call API to add job to completed
+        const addResponse = await axios.post(`${baseURL}/vendor-completed/add`, {
+          jobId: job.id,
+          category: job.category,
+          description: job.description,
+          vendorid: job.vendorid,
+          shopId: job.shopId,
+          payment: job.payment,
+          // Add any other job data here
+        });
+        if (addResponse.status === 200) {
+          setPaymentComplete(true);
+        }
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+  
+    setIsProcessing(false);
+  };
+  
+
+  const handleCancel = () => {
+    onClose(); // Close the modal
+  };
+
+  return (
+    <FormContainer onSubmit={handleSubmit}>
+      <Ribbon>Payment Details</Ribbon>
+      <FormGroup>
+        <Label>Name</Label>
+        <Input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+      </FormGroup>
+      <FormGroup>
+        <Label>Address</Label>
+        <Input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required />
+      </FormGroup>
+      <FormGroup>
+        <Label>Role</Label>
+        <Select value={role} onChange={(e) => setRole(e.target.value)} required>
+          <option value="">Select role</option>
+          <option value="vendor">Vendor</option>
+          <option value="shopper">Shopper</option>
+        </Select>
+      </FormGroup>
+      <FormGroup>
+        <Label>Card details</Label>
+        <CardInputContainer>
+          <CardElement options={{ style: { base: { fontSize: '16px' } } }} />
+        </CardInputContainer>
+      </FormGroup>
+      {error && <ErrorText>{error}</ErrorText>}
+      {paymentComplete ? (
+        <SuccessText>Payment successful!</SuccessText>
+      ) : (
+        <>
+          <PayButton type="submit" disabled={!stripe || isProcessing}>
+            {isProcessing ? 'Processing...' : 'Pay'}
+          </PayButton>
+          <CancelButton type="button" onClick={handleCancel}>Cancel</CancelButton>
+        </>
+      )}
+    </FormContainer>
+  );
+};
+
 
 const VendorPendingJobs = () => {
   const [jobs, setJobs] = useState([]);
-  const { userInfo } = React.useContext(UserContext); // Extract userInfo from user context
-  console.log('Pending Vendor', userInfo) //here gpt
+  const [selectedJob, setSelectedJob] = useState(null); // State to store the selected job
+  const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
+  const { userInfo } = React.useContext(UserContext);
+
   useEffect(() => {
     if (userInfo && userInfo.uid) {
-      // Fetch pending jobs with the userId as a query parameter
       axios.get(`${baseURL}/vendor-pending/${userInfo.uid}`)
         .then((response) => setJobs(response.data))
         .catch((error) => console.error("Error fetching pending jobs:", error));
     }
-  }, [userInfo]); // Fetch jobs whenever userInfo changes
+  }, [userInfo]);
 
   const handleCompleteClick = (job) => {
-    // Extract necessary information from job and user context
-    const { id: jobId, category, description,vendorId , shopId} = job;
-    const completedTime = new Date().toISOString(); // Get current time
-  
-    // Ensure shopId is available before making the request
-    if (shopId) {
-      axios
-        .post(`${baseURL}/vendor-completed/add`, {
-          jobId,
-          category,
-          description,
-          vendorId,
-          shopId,
-          completedTime // Include completedTime in the request body
-        })
-        .then((response) => {
-          console.log(response.data);
-          // Proceed with any additional logic after job completion
-        })
-        .catch((error) => console.error('Error completing job:', error));
-    } else {
-      console.error('Error: shopId not available in user context');
-    }
+    setSelectedJob(job); // Set the selected job
+    setIsModalOpen(true); // Open the modal
   };
-  
-
-  // Function to chunk the jobs array into arrays of 3 elements each
-  const chunkedJobs = jobs.reduce((acc, job, index) => {
-    const chunkIndex = Math.floor(index / 3);
-    if (!acc[chunkIndex]) {
-      acc[chunkIndex] = [];
-    }
-    acc[chunkIndex].push(job);
-    return acc;
-  }, []);
 
   return (
-    <Div>
-      <Div2>
-        {chunkedJobs.map((row, rowIndex) => (
-          <Div3 key={rowIndex}>
-            {row.map((job) => (
-              <StyledLink key={job.id}>
-                <StyledCard>
-                  <CardHeading>{formatShopName(job.category)}</CardHeading>
-                  <CardText>{formatDescription(job.description)}</CardText>
-                  <CardButton onClick={() => handleCompleteClick(job)}>Complete</CardButton>
-                </StyledCard>
-              </StyledLink>
-            ))}
-          </Div3>
-        ))}
-      </Div2>
-      <SeeMoreButton to="/placed-Pending">See more</SeeMoreButton>
-    </Div>
+    <div>
+      {/* Render jobs */}
+      {jobs.map((job) => (
+        <StyledCard key={job.id}>
+          <CardHeading>{formatShopName(job.category)}</CardHeading>
+          <CardText>{formatDescription(job.description)}</CardText>
+          <CardButton onClick={() => handleCompleteClick(job)}>Complete</CardButton>
+        </StyledCard>
+      ))}
+
+      {/* Modal for payment form */}
+      {isModalOpen && (
+        <ModalOverlay>
+          <ModalContent>
+            <CloseButton onClick={() => setIsModalOpen(false)}>Close</CloseButton>
+            {/* Wrap StripePaymentForm with Elements */}
+            <Elements stripe={stripePromise}>
+              <StripePaymentForm job={selectedJob} onClose={() => setIsModalOpen(false)} />
+            </Elements>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+    </div>
   );
-}
+};
 
 
 // Function to format description as specified
@@ -114,6 +217,134 @@ function formatShopName(shopName) {
   return shopName;
 }
 
+
+const FormContainer = styled.form`
+  width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+`;
+
+const Ribbon = styled.div`
+  width: 100%;
+  background-color: #ffcc3d;
+  color: #fff;
+  font-weight: bold;
+  padding: 10px 0;
+  text-align: center;
+  position: relative;
+  margin-bottom: 20px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 0;
+    height: 0;
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-top: 20px solid #ffcc3d;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 20px;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 5px;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+`;
+
+const ErrorText = styled.div`
+  color: red;
+`;
+
+const SuccessText = styled.div`
+  color: green;
+`;
+
+const PayButton = styled.button`
+  background-color: #ffcc3d;
+  color: #fff;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 100%;
+
+  &:hover {
+    background-color: #e6b800;
+  }
+`;
+
+const CancelButton = styled.button`
+  background-color: #fff;
+  color: #ffcc3d;
+  padding: 12px 20px;
+  border: 1px solid #ffcc3d;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  width: calc(50% - 5px);
+
+  &:hover {
+    background-color: #ffcc3d;
+    color: #fff;
+  }
+`;
+
+const CardInputContainer = styled.div`
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+`;
+
+
+// Define styled components for modal
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+`;
 
 const Div = styled.div`
   flex-direction: column;
