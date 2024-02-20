@@ -127,6 +127,7 @@ const LoginComponent = () => {
               onChange={handleChange}
             />
           </FormRow>
+          <FormRow>
           <Label htmlFor="role">Role</Label>
           <Select
             id="role"
@@ -137,6 +138,8 @@ const LoginComponent = () => {
             <option value="Vendor">Vendor</option>
             <option value="Shop">Shop</option>
           </Select>
+          </FormRow>
+
 
           <Div27 type="submit">Login</Div27>
         </Form>
